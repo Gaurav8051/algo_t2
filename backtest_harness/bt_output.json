@@ -1,0 +1,1021 @@
+{
+  "events": [
+    {
+      "n": 1,
+      "dt": "2026-06-01 09:15:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23550.0,
+      "entry_spot": 23631.45
+    },
+    {
+      "n": 2,
+      "dt": "2026-06-01 09:17:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 23700.0,
+      "entry_spot": 23640.5
+    },
+    {
+      "dt": "2026-06-01 09:38:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23550.0,
+      "entry_spot": 23631.45,
+      "exit_spot": 23596.75,
+      "pts": 34.7,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 3,
+      "dt": "2026-06-01 09:39:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23550.0,
+      "entry_spot": 23608.75
+    },
+    {
+      "dt": "2026-06-01 09:45:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23550.0,
+      "entry_spot": 23608.75,
+      "exit_spot": 23592.1,
+      "pts": 16.65,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 4,
+      "dt": "2026-06-01 09:46:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23583.45
+    },
+    {
+      "dt": "2026-06-01 10:07:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23583.45,
+      "exit_spot": 23558.95,
+      "pts": 24.5,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 5,
+      "dt": "2026-06-01 10:08:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23562.2
+    },
+    {
+      "dt": "2026-06-01 10:46:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23562.2,
+      "exit_spot": 23555.35,
+      "pts": 6.85,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 6,
+      "dt": "2026-06-01 10:47:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23556.7
+    },
+    {
+      "dt": "2026-06-01 12:13:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23500.0,
+      "entry_spot": 23556.7,
+      "exit_spot": 23523.65,
+      "pts": 33.05,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 7,
+      "dt": "2026-06-01 12:14:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23450.0,
+      "entry_spot": 23530.0
+    },
+    {
+      "dt": "2026-06-01 12:46:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23450.0,
+      "entry_spot": 23530.0,
+      "exit_spot": 23518.2,
+      "pts": 11.8,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 8,
+      "dt": "2026-06-01 12:47:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23450.0,
+      "entry_spot": 23531.8
+    },
+    {
+      "dt": "2026-06-01 13:29:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23450.0,
+      "entry_spot": 23531.8,
+      "exit_spot": 23483.5,
+      "pts": 48.3,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 9,
+      "dt": "2026-06-01 13:30:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23400.0,
+      "entry_spot": 23478.7
+    },
+    {
+      "dt": "2026-06-01 14:03:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23400.0,
+      "entry_spot": 23478.7,
+      "exit_spot": 23444.95,
+      "pts": 33.75,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 10,
+      "dt": "2026-06-01 14:04:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23350.0,
+      "entry_spot": 23442.65
+    },
+    {
+      "dt": "2026-06-02 09:54:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23350.0,
+      "entry_spot": 23442.65,
+      "exit_spot": 23309.3,
+      "pts": 133.35,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 11,
+      "dt": "2026-06-02 09:55:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23320.0
+    },
+    {
+      "dt": "2026-06-02 10:19:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23320.0,
+      "exit_spot": 23308.4,
+      "pts": 11.6,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 12,
+      "dt": "2026-06-02 10:20:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23315.05
+    },
+    {
+      "dt": "2026-06-02 11:12:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23315.05,
+      "exit_spot": 23309.6,
+      "pts": 5.45,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 13,
+      "dt": "2026-06-02 11:13:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23305.95
+    },
+    {
+      "dt": "2026-06-03 09:33:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23250.0,
+      "entry_spot": 23305.95,
+      "exit_spot": 23272.5,
+      "pts": 33.45,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 14,
+      "dt": "2026-06-03 09:34:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23248.45
+    },
+    {
+      "dt": "2026-06-03 10:37:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23248.45,
+      "exit_spot": 23234.05,
+      "pts": 14.4,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 15,
+      "dt": "2026-06-03 10:38:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23236.85
+    },
+    {
+      "dt": "2026-06-03 11:22:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23236.85,
+      "exit_spot": 23231.8,
+      "pts": 5.05,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 16,
+      "dt": "2026-06-03 11:23:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23236.05
+    },
+    {
+      "dt": "2026-06-03 11:32:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23236.05,
+      "exit_spot": 23230.1,
+      "pts": 5.95,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 17,
+      "dt": "2026-06-03 11:33:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23220.55
+    },
+    {
+      "dt": "2026-06-03 12:09:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23220.55,
+      "exit_spot": 23184.3,
+      "pts": 36.25,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 18,
+      "dt": "2026-06-03 12:10:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23100.0,
+      "entry_spot": 23186.85
+    },
+    {
+      "dt": "2026-06-08 09:26:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23100.0,
+      "entry_spot": 23186.85,
+      "exit_spot": 23147.65,
+      "pts": 39.2,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 19,
+      "dt": "2026-06-08 09:27:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23145.95
+    },
+    {
+      "dt": "2026-06-09 09:15:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23145.95,
+      "exit_spot": 23229.05,
+      "pts": -83.1,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 20,
+      "dt": "2026-06-09 09:16:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23234.95
+    },
+    {
+      "dt": "2026-06-09 10:53:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23150.0,
+      "entry_spot": 23234.95,
+      "exit_spot": 23146.7,
+      "pts": 88.25,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 21,
+      "dt": "2026-06-09 10:54:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23100.0,
+      "entry_spot": 23155.2
+    },
+    {
+      "dt": "2026-06-09 11:35:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23100.0,
+      "entry_spot": 23155.2,
+      "exit_spot": 23144.7,
+      "pts": 10.5,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 22,
+      "dt": "2026-06-09 11:36:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23148.8
+    },
+    {
+      "dt": "2026-06-11 09:19:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23148.8,
+      "exit_spot": 23112.65,
+      "pts": 36.15,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 23,
+      "dt": "2026-06-11 09:20:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23126.9
+    },
+    {
+      "dt": "2026-06-11 09:36:00",
+      "type": "SELL",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23126.9,
+      "exit_spot": 23109.35,
+      "pts": 17.55,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 24,
+      "dt": "2026-06-11 09:37:00",
+      "type": "BUY",
+      "side": "PUT",
+      "strike": 23050.0,
+      "entry_spot": 23116.55
+    },
+    {
+      "dt": "2026-06-15 11:01:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 23700.0,
+      "entry_spot": 23640.5,
+      "exit_spot": 23987.85,
+      "pts": 347.35,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 25,
+      "dt": "2026-06-15 11:02:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23977.6
+    },
+    {
+      "dt": "2026-06-16 14:42:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23977.6,
+      "exit_spot": 23989.35,
+      "pts": 11.75,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 26,
+      "dt": "2026-06-16 14:43:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23978.85
+    },
+    {
+      "dt": "2026-06-17 09:19:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23978.85,
+      "exit_spot": 23979.35,
+      "pts": 0.5,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 27,
+      "dt": "2026-06-17 09:20:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23993.9
+    },
+    {
+      "dt": "2026-06-17 11:00:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23993.9,
+      "exit_spot": 24077.7,
+      "pts": 83.8,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 28,
+      "dt": "2026-06-17 11:01:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24073.9
+    },
+    {
+      "dt": "2026-06-17 11:39:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24073.9,
+      "exit_spot": 24074.2,
+      "pts": 0.3,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 29,
+      "dt": "2026-06-17 11:40:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24071.65
+    },
+    {
+      "dt": "2026-06-17 15:27:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24071.65,
+      "exit_spot": 24075.9,
+      "pts": 4.25,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 30,
+      "dt": "2026-06-17 15:28:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24076.6
+    },
+    {
+      "dt": "2026-06-18 10:18:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24150.0,
+      "entry_spot": 24076.6,
+      "exit_spot": 24111.1,
+      "pts": 34.5,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 31,
+      "dt": "2026-06-18 10:19:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24200.0,
+      "entry_spot": 24114.6
+    },
+    {
+      "dt": "2026-06-19 09:15:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24200.0,
+      "entry_spot": 24114.6,
+      "exit_spot": 23959.55,
+      "pts": -155.05,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 32,
+      "dt": "2026-06-19 09:16:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23971.3
+    },
+    {
+      "dt": "2026-06-19 10:21:00",
+      "type": "SELL",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23971.3,
+      "exit_spot": 23988.1,
+      "pts": 16.8,
+      "reason": "SL_HIT"
+    },
+    {
+      "n": 33,
+      "dt": "2026-06-19 10:22:00",
+      "type": "BUY",
+      "side": "CALL",
+      "strike": 24050.0,
+      "entry_spot": 23989.15
+    }
+  ],
+  "transitions": [
+    {
+      "i": 2,
+      "dt": "2026-06-01 09:17:00",
+      "close": 23640.5,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 23,
+      "dt": "2026-06-01 09:38:00",
+      "close": 23596.75,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 24,
+      "dt": "2026-06-01 09:39:00",
+      "close": 23608.75,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 30,
+      "dt": "2026-06-01 09:45:00",
+      "close": 23592.1,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 31,
+      "dt": "2026-06-01 09:46:00",
+      "close": 23583.45,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 52,
+      "dt": "2026-06-01 10:07:00",
+      "close": 23558.95,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 53,
+      "dt": "2026-06-01 10:08:00",
+      "close": 23562.2,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 91,
+      "dt": "2026-06-01 10:46:00",
+      "close": 23555.35,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 92,
+      "dt": "2026-06-01 10:47:00",
+      "close": 23556.7,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 178,
+      "dt": "2026-06-01 12:13:00",
+      "close": 23523.65,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 179,
+      "dt": "2026-06-01 12:14:00",
+      "close": 23530.0,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 211,
+      "dt": "2026-06-01 12:46:00",
+      "close": 23518.2,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 212,
+      "dt": "2026-06-01 12:47:00",
+      "close": 23531.8,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 254,
+      "dt": "2026-06-01 13:29:00",
+      "close": 23483.5,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 255,
+      "dt": "2026-06-01 13:30:00",
+      "close": 23478.7,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 288,
+      "dt": "2026-06-01 14:03:00",
+      "close": 23444.95,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 289,
+      "dt": "2026-06-01 14:04:00",
+      "close": 23442.65,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 414,
+      "dt": "2026-06-02 09:54:00",
+      "close": 23309.3,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 415,
+      "dt": "2026-06-02 09:55:00",
+      "close": 23320.0,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 439,
+      "dt": "2026-06-02 10:19:00",
+      "close": 23308.4,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 440,
+      "dt": "2026-06-02 10:20:00",
+      "close": 23315.05,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 492,
+      "dt": "2026-06-02 11:12:00",
+      "close": 23309.6,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 493,
+      "dt": "2026-06-02 11:13:00",
+      "close": 23305.95,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 768,
+      "dt": "2026-06-03 09:33:00",
+      "close": 23272.5,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 769,
+      "dt": "2026-06-03 09:34:00",
+      "close": 23248.45,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 832,
+      "dt": "2026-06-03 10:37:00",
+      "close": 23234.05,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 833,
+      "dt": "2026-06-03 10:38:00",
+      "close": 23236.85,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 877,
+      "dt": "2026-06-03 11:22:00",
+      "close": 23231.8,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 878,
+      "dt": "2026-06-03 11:23:00",
+      "close": 23236.05,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 887,
+      "dt": "2026-06-03 11:32:00",
+      "close": 23230.1,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 888,
+      "dt": "2026-06-03 11:33:00",
+      "close": 23220.55,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 924,
+      "dt": "2026-06-03 12:09:00",
+      "close": 23184.3,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 925,
+      "dt": "2026-06-03 12:10:00",
+      "close": 23186.85,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 1887,
+      "dt": "2026-06-08 09:26:00",
+      "close": 23147.65,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 1888,
+      "dt": "2026-06-08 09:27:00",
+      "close": 23145.95,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 2251,
+      "dt": "2026-06-09 09:15:00",
+      "close": 23229.05,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 2252,
+      "dt": "2026-06-09 09:16:00",
+      "close": 23234.95,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 2349,
+      "dt": "2026-06-09 10:53:00",
+      "close": 23146.7,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 2350,
+      "dt": "2026-06-09 10:54:00",
+      "close": 23155.2,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 2391,
+      "dt": "2026-06-09 11:35:00",
+      "close": 23144.7,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 2392,
+      "dt": "2026-06-09 11:36:00",
+      "close": 23148.8,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 3005,
+      "dt": "2026-06-11 09:19:00",
+      "close": 23112.65,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 3006,
+      "dt": "2026-06-11 09:20:00",
+      "close": 23126.9,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 3022,
+      "dt": "2026-06-11 09:36:00",
+      "close": 23109.35,
+      "prev_state": "CALLPUT",
+      "new_state": "CALL"
+    },
+    {
+      "i": 3023,
+      "dt": "2026-06-11 09:37:00",
+      "close": 23116.55,
+      "prev_state": "CALL",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 3857,
+      "dt": "2026-06-15 11:01:00",
+      "close": 23987.85,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 3858,
+      "dt": "2026-06-15 11:02:00",
+      "close": 23977.6,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4454,
+      "dt": "2026-06-16 14:42:00",
+      "close": 23989.35,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4455,
+      "dt": "2026-06-16 14:43:00",
+      "close": 23978.85,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4507,
+      "dt": "2026-06-17 09:19:00",
+      "close": 23979.35,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4508,
+      "dt": "2026-06-17 09:20:00",
+      "close": 23993.9,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4608,
+      "dt": "2026-06-17 11:00:00",
+      "close": 24077.7,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4609,
+      "dt": "2026-06-17 11:01:00",
+      "close": 24073.9,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4647,
+      "dt": "2026-06-17 11:39:00",
+      "close": 24074.2,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4648,
+      "dt": "2026-06-17 11:40:00",
+      "close": 24071.65,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4875,
+      "dt": "2026-06-17 15:27:00",
+      "close": 24075.9,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4876,
+      "dt": "2026-06-17 15:28:00",
+      "close": 24076.6,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 4941,
+      "dt": "2026-06-18 10:18:00",
+      "close": 24111.1,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 4942,
+      "dt": "2026-06-18 10:19:00",
+      "close": 24114.6,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 5253,
+      "dt": "2026-06-19 09:15:00",
+      "close": 23959.55,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 5254,
+      "dt": "2026-06-19 09:16:00",
+      "close": 23971.3,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    },
+    {
+      "i": 5319,
+      "dt": "2026-06-19 10:21:00",
+      "close": 23988.1,
+      "prev_state": "CALLPUT",
+      "new_state": "PUT"
+    },
+    {
+      "i": 5320,
+      "dt": "2026-06-19 10:22:00",
+      "close": 23989.15,
+      "prev_state": "PUT",
+      "new_state": "CALLPUT"
+    }
+  ]
+}

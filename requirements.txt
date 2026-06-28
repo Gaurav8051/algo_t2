@@ -1,0 +1,4 @@
+# Nifty Algo Trader v5 — Python dependencies
+# Install: pip install -r requirements.txt
+
+dhanhq==2.2.0

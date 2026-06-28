@@ -1,0 +1,26 @@
+[Unit]
+Description=Nifty Algo Trader (Dhan API v2.2.0)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/algo_v5
+
+# Change --mode to "live" when ready for real trading
+ExecStart=/home/ubuntu/algo_v5/venv/bin/python /home/ubuntu/algo_v5/main.py --mode paper
+
+# Restart if it crashes, but not if it exits cleanly (Ctrl+C / force-sell)
+Restart=on-failure
+RestartSec=30
+
+# Log output to files
+StandardOutput=append:/home/ubuntu/algo_v5/logs/service.log
+StandardError=append:/home/ubuntu/algo_v5/logs/service.log
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
