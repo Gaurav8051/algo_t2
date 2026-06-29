@@ -29,9 +29,22 @@ def save_session(state: AlgoState, mode: str):
         "index":       state.index_key,
         "daily_pnl":   state.daily_pnl,
         "sr_levels":   [[sr.level, sr.tolerance] for sr in state.sr_levels],
+        "expiry":      config.OPTION_EXPIRY,
+        "global_tolerance": config.TOLERANCE,
+        "num_lots":    config.NUM_LOTS,
         "call_pos":    state.call_pos.to_dict() if state.call_pos else None,
         "put_pos":     state.put_pos.to_dict()  if state.put_pos  else None,
         "fsm":         state.fsm.name,
+        "pending_put_reentry": (
+            [state.pending_put_reentry.level, state.pending_put_reentry.tolerance]
+            if state.pending_put_reentry else None
+        ),
+        "pending_call_reentry": (
+            [state.pending_call_reentry.level, state.pending_call_reentry.tolerance]
+            if state.pending_call_reentry else None
+        ),
+        "call_disabled": state.call_disabled,
+        "put_disabled":  state.put_disabled,
     }
     try:
         with open(config.SESSION_FILE, "w", encoding="utf-8") as f:
@@ -54,12 +67,15 @@ def load_session(mode: str) -> dict | None:
         log.warning(f"Session load error: {e}")
         return None
 
-    # Only restore if same mode and same index
+    # Only restore if same mode and same index (clear stale file on mismatch)
     if data.get("mode") != mode:
-        log.info(f"Session mode mismatch ({data.get('mode')} vs {mode}) — starting fresh")
+        log.info(f"Session mode mismatch ({data.get('mode')} vs {mode}) — clearing stale session")
+        clear_session()
         return None
     if data.get("index") != config.ACTIVE_INDEX:
-        log.info(f"Session index mismatch — starting fresh")
+        log.info(f"Session index mismatch ({data.get('index')} vs "
+                 f"{config.ACTIVE_INDEX}) — clearing stale session")
+        clear_session()
         return None
 
     log.info(f"Found previous session from {data.get('date')}")
@@ -91,6 +107,14 @@ def restore_state(state: AlgoState, session: dict, live_positions: list[dict]) -
         log.info(f"Restored {key}: {pos}")
         restored = True
 
+    if session.get("expiry"):
+        config.OPTION_EXPIRY = session["expiry"]
+        log.info(f"Restored expiry: {config.OPTION_EXPIRY}")
+    if session.get("global_tolerance") is not None:
+        config.TOLERANCE = float(session["global_tolerance"])
+    if session.get("num_lots") is not None:
+        config.NUM_LOTS = int(session["num_lots"])
+
     # Restore S/R if not already set
     if not state.sr_levels and session.get("sr_levels"):
         state.sr_levels = sorted([SRLevel(r[0], r[1]) for r in session["sr_levels"]])
@@ -102,6 +126,15 @@ def restore_state(state: AlgoState, session: dict, live_positions: list[dict]) -
         from datetime import date
         if session.get("date") == str(date.today()):
             state.daily_pnl = session["daily_pnl"]
+
+    for key in ("pending_put_reentry", "pending_call_reentry"):
+        raw = session.get(key)
+        if raw:
+            setattr(state, key, SRLevel(*raw))
+            log.info(f"Restored {key}: {getattr(state, key)}")
+
+    state.call_disabled = session.get("call_disabled", False)
+    state.put_disabled  = session.get("put_disabled", False)
 
     if restored:
         _sync_fsm(state)

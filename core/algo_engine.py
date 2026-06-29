@@ -12,15 +12,22 @@ from core.states import AlgoState, FSMState, Position, SRLevel, CandleFilterStat
 from core.sr_engine import (
     nearest_support, nearest_resistance,
     next_res_above, next_sup_below,
+    next_res_above_entry, next_sup_below_entry,
+    nearest_resistance_above_floor, nearest_support_below_ceiling,
     assign_call_res, assign_put_sup,
+    call_sl_resistance_ref, put_sl_support_ref,
+    call_sl_resistance_valid, put_sl_support_valid,
     resistance_broken, support_broken,
     call_sl, put_sl, call_sl_hit, put_sl_hit,
     put_entry_after_call_exit, call_entry_after_put_exit,
+    put_reentry_after_sl, call_reentry_after_sl,
+    advance_put_reentry_ladder, advance_call_reentry_ladder,
     put_opposite_trigger, call_opposite_trigger,
     is_inverted_green_hammer, is_red_hanging_man,
     select_call_strike, select_put_strike,
 )
 import core.telegram_alert as tg
+from core import order_log as olog
 
 log = logging.getLogger("algo.engine")
 
@@ -117,17 +124,29 @@ class AlgoEngine:
             self._force_exit("PNL_LIMIT")
             return
 
+        self._update_reentry_ladders(candle)
+
         fsm = s.fsm
-        if   fsm == FSMState.NO_POSITION: pass
+        if   fsm == FSMState.NO_POSITION:
+            if s.pending_put_reentry is not None and not s.has_put() and not s.put_disabled:
+                self._check_put_trigger(candle)
+            if s.pending_call_reentry is not None and not s.has_call() and not s.call_disabled:
+                self._check_call_trigger(candle)
         elif fsm == FSMState.CALL_ONLY:
-            self._proc_call(candle)
-            self._check_put_trigger(candle)
+            if s.has_call():
+                self._proc_call(candle)
+            if not s.put_disabled:
+                self._check_put_trigger(candle)
         elif fsm == FSMState.PUT_ONLY:
-            self._proc_put(candle)
-            self._check_call_trigger(candle)
+            if s.has_put():
+                self._proc_put(candle)
+            if not s.call_disabled:
+                self._check_call_trigger(candle)
         elif fsm == FSMState.BOTH:
-            self._proc_call(candle)
-            self._proc_put(candle)
+            if s.has_call():
+                self._proc_call(candle)
+            if s.has_put():
+                self._proc_put(candle)
 
         self._sync_fsm()
         log.info(s.summary())
@@ -135,18 +154,45 @@ class AlgoEngine:
     # ── Manual commands ───────────────────────────────────────────────────────
 
     def manual_buy_call(self, spot: float):
+        if self.state.call_disabled:
+            log.warning("CALL side DISABLED — manual buy blocked"); return
         if self.state.has_call():
             log.warning("CALL exists — duplicate blocked"); return
         self._enter_call(spot, "MANUAL")
 
     def manual_buy_put(self, spot: float):
+        if self.state.put_disabled:
+            log.warning("PUT side DISABLED — manual buy blocked"); return
         if self.state.has_put():
             log.warning("PUT exists — duplicate blocked"); return
         self._enter_put(spot, "MANUAL")
 
     def manual_force_sell(self):
-        log.warning("MANUAL FORCE SELL")
+        log.warning("MANUAL FORCE SELL ALL")
         self._force_exit("MANUAL")
+
+    def manual_sell_call(self):
+        s = self.state
+        if not s.has_call():
+            log.warning("No CALL position to sell"); return
+        spot = s.last_candle.close if s.last_candle else s.call_pos.entry_spot
+        self._exit_call(spot, "MANUAL_SELL_CALL")
+
+    def manual_sell_put(self):
+        s = self.state
+        if not s.has_put():
+            log.warning("No PUT position to sell"); return
+        spot = s.last_candle.close if s.last_candle else s.put_pos.entry_spot
+        self._exit_put(spot, "MANUAL_SELL_PUT")
+
+    def set_side_disabled(self, call: bool | None = None, put: bool | None = None):
+        s = self.state
+        if call is not None:
+            s.call_disabled = call
+            log.info(f"CALL side {'DISABLED' if call else 'ENABLED'}")
+        if put is not None:
+            s.put_disabled = put
+            log.info(f"PUT side {'DISABLED' if put else 'ENABLED'}")
 
     def manual_set_pnl(self, value: float):
         old = self.state.daily_pnl
@@ -192,6 +238,8 @@ class AlgoEngine:
                 self._call_sl_hit(close, pos); return
 
         if not pos.sl_active and pos.own_resistance is not None:
+            if not call_sl_resistance_valid(pos.own_resistance, pos.entry_spot):
+                return
             if resistance_broken(close, pos.own_resistance):
                 pos.sl_level  = call_sl(pos.own_resistance)
                 pos.sl_active = True
@@ -199,10 +247,13 @@ class AlgoEngine:
                 tg.alert_sl_activated("CALL", pos.sl_level, close, self.state.index_key)
                 old = pos.own_resistance
                 pos.own_support    = old
-                pos.own_resistance = next_res_above(old, close, s.sr_levels)
+                pos.own_resistance = next_res_above_entry(old, close, pos.entry_spot,
+                                                          s.sr_levels)
             return
 
         if pos.sl_active and pos.own_resistance is not None:
+            if not call_sl_resistance_valid(pos.own_resistance, pos.entry_spot):
+                return
             if resistance_broken(close, pos.own_resistance):
                 new_sl = call_sl(pos.own_resistance)
                 if new_sl > pos.sl_level:
@@ -210,7 +261,8 @@ class AlgoEngine:
                     pos.sl_level = new_sl
                 old = pos.own_resistance
                 pos.own_support    = old
-                pos.own_resistance = next_res_above(old, close, s.sr_levels)
+                pos.own_resistance = next_res_above_entry(old, close, pos.entry_spot,
+                                                          s.sr_levels)
 
     # ── PUT processing ────────────────────────────────────────────────────────
 
@@ -231,6 +283,8 @@ class AlgoEngine:
                 self._put_sl_hit(close, pos); return
 
         if not pos.sl_active and pos.own_support is not None:
+            if not put_sl_support_valid(pos.own_support, pos.entry_spot):
+                return
             if support_broken(close, pos.own_support):
                 pos.sl_level  = put_sl(pos.own_support)
                 pos.sl_active = True
@@ -238,10 +292,13 @@ class AlgoEngine:
                 tg.alert_sl_activated("PUT", pos.sl_level, close, self.state.index_key)
                 old = pos.own_support
                 pos.own_resistance = old
-                pos.own_support    = next_sup_below(old, close, s.sr_levels)
+                pos.own_support    = next_sup_below_entry(old, close, pos.entry_spot,
+                                                          s.sr_levels)
             return
 
         if pos.sl_active and pos.own_support is not None:
+            if not put_sl_support_valid(pos.own_support, pos.entry_spot):
+                return
             if support_broken(close, pos.own_support):
                 new_sl = put_sl(pos.own_support)
                 if new_sl < pos.sl_level:
@@ -249,7 +306,8 @@ class AlgoEngine:
                     pos.sl_level = new_sl
                 old = pos.own_support
                 pos.own_resistance = old
-                pos.own_support    = next_sup_below(old, close, s.sr_levels)
+                pos.own_support    = next_sup_below_entry(old, close, pos.entry_spot,
+                                                          s.sr_levels)
 
     # ── Candle filters ────────────────────────────────────────────────────────
 
@@ -271,25 +329,55 @@ class AlgoEngine:
         else:
             log.info(f"HAMMER NOT confirmed ({close}<={trig}) -> SL holds")
 
-    # ── Case-II opposite-side triggers (while exactly one leg open) ─────────
+    # ── Case-II opposite-side + gated same-side re-entry after SL ─────────────
     #
-    # PUT while CALL_ONLY (Case-II): support below CALL's own resistance
-    # broken downward at 1.0x tolerance — NOT any level in the list, and NOT
-    # R-1.2x (that applies only after CALL SL in _call_sl_hit).
-    #
-    # CALL while PUT_ONLY: PUT's own resistance + 1.2x tolerance (bounce), or
-    # Case-II mirror — resistance above PUT support broken at 1.0x tolerance.
-    #
-    # Does NOT apply when flat or when both sides are open.
+    # First opposite entry (Case-II): 1.2x break vs open leg's R/S ladder.
+    # After a leg exits via SL, same-side re-entry is BLOCKED until price
+    # breaks the current ladder support/resistance reference by 1.2x:
+    #   PUT re-entry: close < ref_support - 1.2x tol
+    #   CALL re-entry: close >= ref_resistance + 1.2x tol
+    # The ref advances with market (R broken -> new S ref for PUT; S broken
+    # -> new R ref for CALL) via _update_reentry_ladders().
+    # While a pending re-entry gate is active, Case-II opposite scan is skipped.
+
+    def _update_reentry_ladders(self, candle: Candle):
+        s = self.state
+        close = candle.close
+        if s.pending_put_reentry is not None:
+            old = s.pending_put_reentry
+            new = advance_put_reentry_ladder(close, old, s.sr_levels)
+            if new.level != old.level:
+                gate = new.level - config.ENTRY_FILTER_MULT * new.tol(config.TOLERANCE)
+                log.info(f"PUT re-entry ladder: S {old.level} -> {new.level} "
+                         f"(gate={gate:.2f})")
+                s.pending_put_reentry = new
+        if s.pending_call_reentry is not None:
+            old = s.pending_call_reentry
+            new = advance_call_reentry_ladder(close, old, s.sr_levels)
+            if new.level != old.level:
+                gate = new.level + config.ENTRY_FILTER_MULT * new.tol(config.TOLERANCE)
+                log.info(f"CALL re-entry ladder: R {old.level} -> {new.level} "
+                         f"(gate={gate:.2f})")
+                s.pending_call_reentry = new
 
     def _check_put_trigger(self, candle: Candle):
         s = self.state
         if s.has_put():
             return
+        close = candle.close
+
+        if s.pending_put_reentry is not None:
+            ref = s.pending_put_reentry
+            gate = ref.level - config.ENTRY_FILTER_MULT * ref.tol(config.TOLERANCE)
+            if put_reentry_after_sl(close, ref):
+                log.info(f"PUT REENTRY after SL: close={close:.2f} < S={ref.level} "
+                         f"-1.2x (gate={gate:.2f})")
+                self._enter_put(close, "PUT_REENTRY_AFTER_SL")
+            return
+
         pos = s.call_pos
         if pos is None or pos.own_resistance is None:
             return
-        close = candle.close
         if not put_opposite_trigger(close, pos.own_resistance, s.sr_levels):
             return
         log.info(f"OPPOSITE-SIDE PUT (Case-II): close={close:.2f} broke support "
@@ -300,10 +388,20 @@ class AlgoEngine:
         s = self.state
         if s.has_call():
             return
+        close = candle.close
+
+        if s.pending_call_reentry is not None:
+            ref = s.pending_call_reentry
+            gate = ref.level + config.ENTRY_FILTER_MULT * ref.tol(config.TOLERANCE)
+            if call_reentry_after_sl(close, ref):
+                log.info(f"CALL REENTRY after SL: close={close:.2f} >= R={ref.level} "
+                         f"+1.2x (gate={gate:.2f})")
+                self._enter_call(close, "CALL_REENTRY_AFTER_SL")
+            return
+
         pos = s.put_pos
         if pos is None or pos.own_resistance is None or pos.own_support is None:
             return
-        close = candle.close
         if not call_opposite_trigger(close, pos.own_resistance, pos.own_support,
                                      s.sr_levels):
             return
@@ -318,22 +416,28 @@ class AlgoEngine:
     # ── SL execution + auto reverse ───────────────────────────────────────────
 
     def _call_sl_hit(self, close: float, pos: Position):
-        # own_support at exit is the resistance that was broken (e.g. 24000)
         ref = pos.own_support
+        if ref is not None:
+            self.state.pending_call_reentry = ref
+            log.info(f"CALL SL exit — CALL re-entry gated at R={ref.level}+1.2x")
         self._exit_call(close, "SL_HIT")
-        if self.state.has_put(): return
+        if self.state.has_put():
+            return
         if ref and put_entry_after_call_exit(close, ref):
             self._enter_put(close, "AUTO_AFTER_CALL_SL")
 
     def _put_sl_hit(self, close: float, pos: Position):
-        # Use PUT's tracked resistance at exit (e.g. 23956 after ladder trail).
-        # CALL enters when close >= that R + 1.2x tol — same rule as opposite-side
-        # CALL while PUT is open; NOT the frozen entry_resistance (24000).
-        ref = pos.own_resistance
+        ref_res = pos.own_resistance
+        ref_sup = pos.own_support
+        if ref_sup is not None:
+            self.state.pending_put_reentry = ref_sup
+            gate = ref_sup.level - config.ENTRY_FILTER_MULT * ref_sup.tol(config.TOLERANCE)
+            log.info(f"PUT SL exit — PUT re-entry gated at S={ref_sup.level}-1.2x "
+                     f"(gate={gate:.2f})")
         self._exit_put(close, "SL_HIT")
         if self.state.has_call():
             return
-        if ref and call_entry_after_put_exit(close, ref):
+        if ref_res and call_entry_after_put_exit(close, ref_res):
             self._enter_call(close, "AUTO_AFTER_PUT_SL")
 
     # ── Entry / exit ──────────────────────────────────────────────────────────
@@ -351,9 +455,13 @@ class AlgoEngine:
         pos.entry_resistance = pos.own_resistance
         pos.entry_support    = pos.own_support
         s.call_pos = pos
+        s.pending_call_reentry = None
         self._sync_fsm()
         tg.alert_buy("CALL", strike, pos.entry_price, spot,
                      s.index_key, pos.quantity, reason, mode=s.mode)
+        olog.append({"type": "BUY", "side": "CALL", "strike": strike,
+                     "spot": spot, "price": pos.entry_price, "reason": reason,
+                     "mode": s.mode, "index": s.index_key})
         log.info(f"CALL ENTERED k={strike} reason={reason} "
                  f"R={pos.own_resistance} S={pos.own_support}")
 
@@ -370,9 +478,13 @@ class AlgoEngine:
         pos.entry_support    = pos.own_support
         pos.entry_resistance = pos.own_resistance
         s.put_pos = pos
+        s.pending_put_reentry = None
         self._sync_fsm()
         tg.alert_buy("PUT", strike, pos.entry_price, spot,
                      s.index_key, pos.quantity, reason, mode=s.mode)
+        olog.append({"type": "BUY", "side": "PUT", "strike": strike,
+                     "spot": spot, "price": pos.entry_price, "reason": reason,
+                     "mode": s.mode, "index": s.index_key})
         log.info(f"PUT ENTERED k={strike} reason={reason} "
                  f"S={pos.own_support} R={pos.own_resistance}")
 
@@ -384,6 +496,9 @@ class AlgoEngine:
         s.daily_pnl += pnl
         tg.alert_sell("CALL", pos.strike, exit_px, spot, pnl, s.index_key,
                       pos.quantity, reason, mode=s.mode)
+        olog.append({"type": "SELL", "side": "CALL", "strike": pos.strike,
+                     "spot": spot, "price": exit_px, "pnl": pnl, "reason": reason,
+                     "mode": s.mode, "index": s.index_key})
         s.call_pos = None
         self._sync_fsm()
         log.info(f"CALL CLOSED pnl=Rs{pnl:,.2f} total=Rs{s.daily_pnl:,.2f}")
@@ -396,11 +511,16 @@ class AlgoEngine:
         s.daily_pnl += pnl
         tg.alert_sell("PUT", pos.strike, exit_px, spot, pnl, s.index_key,
                       pos.quantity, reason, mode=s.mode)
+        olog.append({"type": "SELL", "side": "PUT", "strike": pos.strike,
+                     "spot": spot, "price": exit_px, "pnl": pnl, "reason": reason,
+                     "mode": s.mode, "index": s.index_key})
         s.put_pos = None
         self._sync_fsm()
         log.info(f"PUT CLOSED pnl=Rs{pnl:,.2f} total=Rs{s.daily_pnl:,.2f}")
 
     def _force_exit(self, reason: str = ""):
+        self.state.pending_put_reentry = None
+        self.state.pending_call_reentry = None
         extra = self.client.force_sell_all(self.state)
         self.state.daily_pnl += extra
         self.state.fsm        = FSMState.FORCE_EXIT
@@ -427,23 +547,36 @@ class AlgoEngine:
         if s.call_pos:
             p = s.call_pos
             if not p.sl_active:
-                p.own_resistance = assign_call_res(close, s.sr_levels)
-                p.own_support    = nearest_support(close, s.sr_levels)
+                p.own_resistance = call_sl_resistance_ref(p.entry_spot, s.sr_levels)
+                p.own_support    = nearest_support(p.entry_spot, s.sr_levels)
             else:
-                p.own_resistance = nearest_resistance(close, s.sr_levels)
+                ref = nearest_resistance_above_floor(close, p.entry_spot, s.sr_levels)
+                if ref is not None:
+                    p.own_resistance = ref
         if s.put_pos:
             p = s.put_pos
             if not p.sl_active:
-                p.own_support    = assign_put_sup(close, s.sr_levels)
-                p.own_resistance = nearest_resistance(close, s.sr_levels)
+                p.own_support    = put_sl_support_ref(p.entry_spot, s.sr_levels)
+                p.own_resistance = nearest_resistance(p.entry_spot, s.sr_levels)
             else:
-                p.own_support = nearest_support(close, s.sr_levels)
+                ref = nearest_support_below_ceiling(close, p.entry_spot, s.sr_levels)
+                if ref is not None:
+                    p.own_support = ref
 
     def _pnl_limit_hit(self) -> bool:
         if not config.PNL_LIMIT_ENABLED_FOR_MODE.get(self.state.mode, True):
             return False
+        mode = getattr(config, "PNL_LIMIT_MODE", "none")
+        if mode == "none":
+            return False
         p = self.state.daily_pnl
-        return p >= config.DAILY_PROFIT_TARGET or p <= config.DAILY_LOSS_LIMIT
+        if mode == "profit":
+            return p >= config.DAILY_PROFIT_TARGET
+        if mode == "loss":
+            return p <= config.DAILY_LOSS_LIMIT
+        if mode == "both":
+            return p >= config.DAILY_PROFIT_TARGET or p <= config.DAILY_LOSS_LIMIT
+        return False
 
     def _funds_ok(self, security_id: str, strike: float, side: str) -> bool:
         checker = getattr(self.client, "check_funds_before_buy", None)

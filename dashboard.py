@@ -1,286 +1,235 @@
 """
-dashboard.py — Remote control dashboard for the Algo Trader.
+dashboard.py — CLI remote control for the Algo Trader.
 
-HOW IT WORKS:
-  - main.py (running on server or locally) writes  data/snapshot.json  every 10s
-  - dashboard.py reads that file for display
-  - Commands typed here are written to  data/command.json
-  - main.py reads and executes commands within 1 second
+Local:  reads data/snapshot.json, writes data/command.json
+Remote: python dashboard.py --remote <server-ip> [--port 8765]
 
-ON WINDOWS (local desktop):
-  main.py opens this dashboard automatically in a second PowerShell window.
-  If it didn't open, run manually:
-      cd C:\\home\\algo_v5
-      python dashboard.py
-
-ON ORACLE CLOUD SERVER (remote):
-  Open a SECOND SSH terminal to your server:
-      ssh ubuntu@<your-server-ip>
-      cd ~/algo_v5
-      python dashboard.py
-  You can close and reopen this dashboard anytime.
-  The algo keeps running whether dashboard is open or not.
-
-COMMANDS:
-  status              live positions, PnL, FSM state
-  buy call            manual CALL entry at current spot
-  buy put             manual PUT entry at current spot
-  sell all            force-close all open positions
-  set pnl 5000        override daily PnL to Rs5000
-  add sr 23978        add S/R level (global tolerance)
-  add sr 23978 8      add S/R level with tolerance=8
-  del sr 23978        delete S/R level
-  set tol 23956 9     set per-level tolerance for 23956
-  set expiry 2026-07-03   change option expiry live
-  set profit 8000     change profit target
-  set loss -4000      change loss limit
-  clear session       delete saved session (start fresh next time)
-  help                show this list
-  quit                exit dashboard (algo keeps running)
+GUI alternative: python dashboard_gui.py [--remote <ip>]
 """
-
+from __future__ import annotations
+import argparse
 import json
 import os
 import sys
 import time
 
-# Paths match what main.py writes
-BASE      = os.path.dirname(os.path.abspath(__file__))
-SNAPSHOT  = os.path.join(BASE, "data", "snapshot.json")
-CMD_FILE  = os.path.join(BASE, "data", "command.json")
-SESSION   = os.path.join(BASE, "data", "session.json")
+BASE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE)
+
+import config
+
+SNAPSHOT = os.path.join(BASE, "data", "snapshot.json")
+CMD_FILE = os.path.join(BASE, "data", "command.json")
+SESSION  = os.path.join(BASE, "data", "session.json")
 
 
-# ─── Command sender ───────────────────────────────────────────────────────────
+class Backend:
+    def __init__(self, remote: str = "", port: int = 0, token: str = ""):
+        self._remote = remote
+        self._client = None
+        if remote:
+            from core.control_client import ControlClient
+            self._client = ControlClient(remote, port or config.CONTROL_PORT, token)
 
-def send(cmd: dict):
-    try:
+    def get_snapshot(self):
+        if self._client:
+            return self._client.get_snapshot()
+        if not os.path.exists(SNAPSHOT):
+            return None
+        with open(SNAPSHOT, encoding="utf-8") as f:
+            return json.load(f)
+
+    def send(self, cmd: dict) -> tuple[bool, str]:
+        if self._client:
+            return self._client.send_command(cmd)
         with open(CMD_FILE, "w", encoding="utf-8") as f:
             json.dump(cmd, f)
-        print(f"  >> Sent: {cmd}")
-    except Exception as e:
-        print(f"  !! Could not write command: {e}")
+        return True, "queued"
 
 
-# ─── Status display ───────────────────────────────────────────────────────────
-
-def show_status():
-    if not os.path.exists(SNAPSHOT):
-        print("\n  [No snapshot found]")
-        print("  Is main.py running?")
-        if os.name == "nt":
-            print("  Run in Terminal 1:  python main.py")
-        else:
-            print("  Run on server:  python main.py --mode paper  (or live)")
+def show_status(backend: Backend):
+    s = backend.get_snapshot()
+    if not s:
+        print("\n  [No snapshot — is main.py running?]")
         return
-
-    try:
-        with open(SNAPSHOT, encoding="utf-8") as f:
-            s = json.load(f)
-    except Exception:
-        print("  [Snapshot unreadable — will retry]")
-        return
-
     ago = time.time() - s.get("timestamp", time.time())
     fresh = ago < 15
-
     print()
     print("  " + "=" * 56)
-    print(f"  {'MODE':<14}: {s.get('mode','?').upper()}  |  "
-          f"INDEX: {s.get('index','?')}  |  "
-          f"EXPIRY: {s.get('expiry','?')}")
-    print(f"  {'FSM STATE':<14}: {s.get('fsm','?')}")
-    print(f"  {'PRODUCT':<14}: {s.get('product_type','?')}")
-    print(f"  {'LAST CANDLE':<14}: {s.get('last_close','?')}  "
-          f"(closes every 1 min)")
-    print(f"  {'LIVE TICK':<14}: {s.get('last_tick','?')}  "
-          f"(updates every 10s)")
-    print(f"  {'REALISED PnL':<14}: Rs {s.get('daily_pnl',0):>10,.2f}")
-    print(f"  {'UNREALISED':<14}: Rs {s.get('unrealised_pnl',0):>10,.2f}  "
-          f"(mark-to-market)")
-    print(f"  {'TOTAL PnL':<14}: Rs {s.get('total_pnl',0):>10,.2f}")
-    sr = [str(l[0]) for l in s.get("sr_levels", [])]
-    print(f"  {'S/R LEVELS':<14}: {', '.join(sr)}")
-
-    for side in ["call", "put"]:
+    print(f"  MODE          : {s.get('mode','?').upper()}  |  INDEX: {s.get('index','?')}")
+    print(f"  FSM           : {s.get('fsm','?')}  |  EXPIRY: {s.get('expiry','?')}")
+    print(f"  CALL disabled : {s.get('call_disabled', False)}  |  PUT disabled: {s.get('put_disabled', False)}")
+    print(f"  REALISED PnL  : Rs {s.get('daily_pnl',0):>10,.2f}")
+    print(f"  UNREALISED    : Rs {s.get('unrealised_pnl',0):>10,.2f}")
+    print(f"  TOTAL PnL     : Rs {s.get('total_pnl',0):>10,.2f}")
+    print(f"  PnL LIMIT     : {s.get('pnl_limit_mode','none')}")
+    sr = [f"{l[0]}(t={l[1]})" for l in s.get("sr_levels", [])]
+    print(f"  S/R           : {', '.join(sr)}")
+    for side in ("call", "put"):
         p = s.get(f"{side}_pos")
         if p:
-            sl = (f"ACTIVE @ {p['sl_level']:.1f}"
-                  if p["sl_active"] else "WAITING (S/R not broken yet)")
-            print()
-            print(f"  {side.upper()} POSITION:")
-            print(f"    Strike     : {p['strike']}")
-            print(f"    Entry Prem : Rs {p['entry_price']:.2f}")
-            print(f"    Entry Spot : {p['entry_spot']:.2f}")
-            print(f"    SL Status  : {sl}")
-            print(f"    Resistance : {p['own_resistance']}")
-            print(f"    Support    : {p['own_support']}")
-            if p.get("candle_filter_active"):
-                print(f"    *** CANDLE FILTER ACTIVE: {p['filter_type']} "
-                      f"— waiting 1 more candle ***")
-
-    status_line = ("LIVE (fresh)" if fresh
-                   else f"STALE — {ago:.0f}s old "
-                        f"{'(main.py not running?)' if ago > 60 else ''}")
-    print()
-    print(f"  Snapshot : {status_line}")
+            sl = f"ACTIVE@{p['sl_level']:.1f}" if p.get("sl_active") else "WAITING"
+            print(f"  {side.upper():5} k={p['strike']} entry=Rs{p['entry_price']:.2f} SL={sl}")
+    print(f"  Snapshot      : {'LIVE' if fresh else f'STALE {ago:.0f}s'}")
     print("  " + "=" * 56)
-    print()
 
-
-# ─── Help text ────────────────────────────────────────────────────────────────
 
 HELP = """
-  COMMANDS:
-  status                show live positions and PnL
-  buy call              manual CALL entry
-  buy put               manual PUT entry
-  sell all              force-close all positions (asks confirm)
-  set pnl 5000          override daily PnL value
-  add sr 23978          add S/R level (global tolerance)
-  add sr 23978 8        add S/R level with tolerance=8
-  del sr 23978          delete S/R level
-  set tol 23956 9       set per-level tolerance for 23956
-  set expiry 2026-07-03  change option expiry live
-  set profit 8000       change daily profit target
-  set loss -4000        change daily loss limit
-  clear session         delete saved session file
-  q-paper               quit paper mode (close virtual positions, save snapshot)
-  help / ?              show this list
-  quit / exit           close dashboard (algo keeps running)
+  TRADE
+    buy call / buy put       manual entry (blocked if side disabled or duplicate)
+    sell call / sell put     exit one leg
+    sell all                 force-close all (confirm yes)
+
+  DISABLE (strategy skips auto logic on disabled side)
+    disable call / disable put / disable both
+    enable call  / enable put  / enable all
+
+  S/R & CONFIG
+    add sr 23978 [tol]       add level (optional per-level tolerance)
+    del sr 23978             delete level
+    set tol 23956 9          per-level tolerance
+    set global tol 11        global default tolerance
+    set expiry 2026-07-03    option expiry
+    set lots 2               lots per order
+
+  PnL
+    set pnl 5000             override realised daily PnL
+    set profit 8000          profit target Rs
+    set loss -4000           loss limit Rs
+    set pnl mode none|profit|loss|both
+
+  PAPER
+    q-paper                  quit paper (close virtual positions, stop paper main.py)
+  stop algo                stop main.py when flat (no open positions)
+
+  OTHER
+    status / history / help / quit
 """
 
 
-# ─── Main loop ────────────────────────────────────────────────────────────────
+def show_history(backend: Backend):
+    s = backend.get_snapshot() or {}
+    rows = s.get("order_history", [])
+    if not rows:
+        print("  No orders in log.")
+        return
+    print(f"\n  Last {min(30, len(rows))} orders:")
+    for r in reversed(rows[-30:]):
+        ts = time.strftime("%H:%M:%S", time.localtime(r.get("ts", 0)))
+        print(f"  {ts}  {r.get('type','?'):4} {r.get('side','?'):4} k={r.get('strike','?')} "
+              f"spot={r.get('spot','?')} pnl={r.get('pnl','')}  {r.get('reason','')}")
 
-def run():
-    print()
-    print("  +====================================================+")
-    print("  |   NIFTY ALGO TRADER  —  DASHBOARD  (v5)           |")
-    print("  |   Dhan API v2.2.0  |  Delivery/Positional Mode    |")
-    print("  +====================================================+")
-    print("  Type 'help' for commands.  Type 'status' to see state.")
-    print("  Closing this window does NOT stop the algo.\n")
+
+def run(backend: Backend):
+    print("\n  NIFTY ALGO TRADER — CLI Dashboard v5")
+    if backend._remote:
+        print(f"  Remote: {backend._remote}:{config.CONTROL_PORT}")
+    print("  Type 'help'. Closing dashboard does NOT stop the algo.\n")
 
     while True:
         try:
             raw = input("algo> ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\n  Dashboard closed. Algo keeps running.")
+            print("\n  Dashboard closed.")
             break
-
         if not raw:
             continue
+        p = raw.lower().split()
+        cmd_key = " ".join(p[:3]) if len(p) >= 3 else " ".join(p[:2]) if len(p) >= 2 else p[0]
 
-        p   = raw.lower().split()
-        cmd = " ".join(p[:2]) if len(p) >= 2 else p[0] if p else ""
-
-        # ── Display ──────────────────────────────────────────────────────────
         if raw.lower() in ("help", "?", "h"):
             print(HELP)
-
         elif raw.lower() == "status":
-            show_status()
-
-        # ── Trading commands ─────────────────────────────────────────────────
-        elif cmd == "buy call":
-            send({"action": "buy_call"})
-
-        elif cmd == "buy put":
-            send({"action": "buy_put"})
-
-        elif cmd == "sell all":
-            confirm = input("  Confirm FORCE SELL ALL positions? (yes/no): ").strip().lower()
-            if confirm == "yes":
-                send({"action": "force_sell"})
-            else:
-                print("  Cancelled.")
-
-        # ── P&L ──────────────────────────────────────────────────────────────
-        elif cmd == "set pnl":
+            show_status(backend)
+        elif raw.lower() == "history":
+            show_history(backend)
+        elif cmd_key == "buy call":
+            ok, msg = backend.send({"action": "buy_call"})
+            print(f"  {'OK' if ok else 'FAIL'}: {msg}")
+        elif cmd_key == "buy put":
+            ok, msg = backend.send({"action": "buy_put"})
+            print(f"  {'OK' if ok else 'FAIL'}: {msg}")
+        elif cmd_key == "sell call":
+            ok, msg = backend.send({"action": "sell_call"})
+            print(f"  {'OK' if ok else 'FAIL'}: {msg}")
+        elif cmd_key == "sell put":
+            ok, msg = backend.send({"action": "sell_put"})
+            print(f"  {'OK' if ok else 'FAIL'}: {msg}")
+        elif cmd_key == "sell all":
+            if input("  Confirm sell ALL? (yes/no): ").strip().lower() == "yes":
+                backend.send({"action": "force_sell"})
+        elif cmd_key == "set pnl" and len(p) >= 3 and p[2] == "mode":
+            backend.send({"action": "set_pnl_mode", "value": p[3] if len(p) > 3 else "none"})
+        elif cmd_key == "set pnl":
             try:
-                send({"action": "set_pnl", "value": float(p[2])})
+                backend.send({"action": "set_pnl", "value": float(p[2])})
             except (IndexError, ValueError):
                 print("  Usage: set pnl 5000")
-
-        # ── S/R management ───────────────────────────────────────────────────
-        elif cmd == "add sr":
+        elif cmd_key == "set global tol":
             try:
-                level = float(p[2])
-                tol   = float(p[3]) if len(p) > 3 else None
-                send({"action": "add_sr", "level": level, "tolerance": tol})
+                backend.send({"action": "set_global_tol", "value": float(p[3])})
             except (IndexError, ValueError):
-                print("  Usage: add sr 23978   OR   add sr 23978 8")
-
-        elif cmd == "del sr":
+                print("  Usage: set global tol 11")
+        elif cmd_key == "set pnl mode":
+            backend.send({"action": "set_pnl_mode", "value": p[3] if len(p) > 3 else "none"})
+        elif cmd_key == "add sr":
             try:
-                send({"action": "del_sr", "level": float(p[2])})
+                c = {"action": "add_sr", "level": float(p[2])}
+                if len(p) > 3:
+                    c["tolerance"] = float(p[3])
+                backend.send(c)
             except (IndexError, ValueError):
-                print("  Usage: del sr 23978")
-
-        elif cmd == "set tol":
-            try:
-                send({"action": "set_tol", "level": float(p[2]),
-                      "tolerance": float(p[3])})
-            except (IndexError, ValueError):
-                print("  Usage: set tol 23956 9")
-
-        # ── Config changes ────────────────────────────────────────────────────
-        elif cmd == "set expiry":
-            try:
-                send({"action": "set_expiry", "value": p[2]})
-            except IndexError:
-                print("  Usage: set expiry 2026-07-03")
-
-        elif cmd == "set profit":
-            try:
-                send({"action": "set_profit", "value": float(p[2])})
-            except (IndexError, ValueError):
-                print("  Usage: set profit 8000")
-
-        elif cmd == "set loss":
-            try:
-                send({"action": "set_loss", "value": float(p[2])})
-            except (IndexError, ValueError):
-                print("  Usage: set loss -4000")
-
-        # ── Session ───────────────────────────────────────────────────────────
-        elif raw.lower() == "clear session":
-            confirm = input("  Delete saved session file? (yes/no): ").strip().lower()
-            if confirm == "yes":
-                if os.path.exists(SESSION):
-                    os.remove(SESSION)
-                    print("  Session cleared. Next startup will start fresh.")
-                else:
-                    print("  No session file found.")
-
-        elif raw.lower() in ("q-paper", "qpaper"):
-            if not os.path.exists(SNAPSHOT):
-                print("  No snapshot — is main.py running in paper mode?")
-            else:
-                try:
-                    with open(SNAPSHOT, encoding="utf-8") as f:
-                        mode = json.load(f).get("mode", "").lower()
-                except Exception:
-                    mode = ""
-                if mode != "paper":
-                    print(f"  Q-paper only works when algo is in PAPER mode (current: {mode or '?'})")
-                else:
-                    confirm = input("  Quit paper trading and close all virtual positions? (yes/no): ").strip().lower()
-                    if confirm == "yes":
-                        send({"action": "q_paper"})
-                        print("  Q-paper sent. Paper session will stop within ~1 second.")
-                    else:
-                        print("  Cancelled.")
-
-        # ── Exit ──────────────────────────────────────────────────────────────
-        elif raw.lower() in ("quit", "exit", "q"):
-            print("  Dashboard closed. Algo keeps running on server.")
+                print("  Usage: add sr 23978 [tol]")
+        elif cmd_key == "del sr":
+            backend.send({"action": "del_sr", "level": float(p[2])})
+        elif cmd_key == "set tol":
+            backend.send({"action": "set_tol", "level": float(p[2]), "tolerance": float(p[3])})
+        elif cmd_key == "set expiry":
+            backend.send({"action": "set_expiry", "value": p[2]})
+        elif cmd_key == "set profit":
+            backend.send({"action": "set_profit", "value": float(p[2])})
+        elif cmd_key == "set loss":
+            backend.send({"action": "set_loss", "value": float(p[2])})
+        elif cmd_key == "set lots":
+            backend.send({"action": "set_lots", "value": int(p[2])})
+        elif raw == "disable call":
+            backend.send({"action": "disable_call"})
+        elif raw == "disable put":
+            backend.send({"action": "disable_put"})
+        elif raw == "disable both":
+            backend.send({"action": "disable_both"})
+        elif raw == "enable call":
+            backend.send({"action": "enable_call"})
+        elif raw == "enable put":
+            backend.send({"action": "enable_put"})
+        elif raw == "enable all":
+            backend.send({"action": "enable_all"})
+        elif raw in ("q-paper", "qpaper"):
+            snap = backend.get_snapshot() or {}
+            if snap.get("mode", "").lower() != "paper":
+                print("  Q-paper only in PAPER mode.")
+            elif input("  Confirm Q-paper? (yes/no): ").strip().lower() == "yes":
+                backend.send({"action": "q_paper"})
+        elif raw in ("stop algo", "stop"):
+            snap = backend.get_snapshot() or {}
+            if snap.get("call_pos") or snap.get("put_pos"):
+                print("  Close all positions first: sell all")
+            elif input("  Stop algo process (flat)? (yes/no): ").strip().lower() == "yes":
+                backend.send({"action": "stop_algo"})
+        elif raw in ("quit", "exit", "q"):
             break
-
         else:
-            print(f"  Unknown command: '{raw}'  (type 'help')")
+            print(f"  Unknown: '{raw}'  (type help)")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--remote", default="", help="Cloud server IP")
+    ap.add_argument("--port", type=int, default=config.CONTROL_PORT)
+    ap.add_argument("--token", default=config.CONTROL_TOKEN)
+    args = ap.parse_args()
+    run(Backend(args.remote, args.port, args.token))
 
 
 if __name__ == "__main__":
-    run()
+    main()

@@ -4,10 +4,8 @@ using the user's exact S/R levels (23805…24045) and tolerance=11.
 
 Drives the REAL algo_engine.py — no mocks of strategy logic.
 
-NOTE on opposite-side triggers (corrected):
-  PUT while CALL open: only Case-II support break (below CALL's R, 1.0x tol).
-  CALL while PUT open: PUT's R + 1.2x tol, or resistance break (Case-II mirror).
-  R-1.2x PUT entry applies only AFTER CALL SL (auto-reversal), not at 23952.
+NOTE: All opposite-side and auto-reversal entries use 1.2x tolerance
+  (ENTRY_FILTER_MULT). Case-II PUT at S-1.2x11; mirror CALL at R+1.2x11.
 
 Run:  python backtest_harness/run_spec_walkthrough.py
 """
@@ -20,7 +18,7 @@ _PKG_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PKG_ROOT)
 
 import config
-from core.states import AlgoState, SRLevel, Candle, Position
+from core.states import AlgoState, SRLevel, Candle, Position, FSMState
 from core.algo_engine import AlgoEngine
 
 # ── User S/R from spec ────────────────────────────────────────────────────────
@@ -196,8 +194,8 @@ def run_case2():
     engine, state, client = _engine()
     candles = [
         ("Drift down — R 23956 not hit on CALL",        _candle(1,  23920, 23940, 23915, 23937)),
-        ("Support 23900 broken — opposite PUT",         _candle(2,  23937, 23940, 23885, 23888)),
-        ("Recovery — PUT SL may activate",              _candle(3,  23888, 23955, 23880, 23950)),
+        ("Close < 23886.8 — PUT at S-1.2x (23900)",     _candle(2,  23937, 23940, 23882, 23886)),
+        ("Recovery — PUT SL may activate",              _candle(3,  23886, 23955, 23880, 23950)),
     ]
     _run_phase("CASE-II: CALL open, support break -> PUT (no R hit on CALL)",
                candles, engine, state, client,
@@ -205,38 +203,71 @@ def run_case2():
 
 
 def run_case2_mirror():
-    """
-    Case-II mirror: manual PUT, market rises without PUT SL, resistance
-    23956 broken at +1.0x tol (23967) -> opposite CALL.
-    Bounce path (R+1.2x = 23969.2) is a separate, later threshold.
-    """
+    """Case-II mirror: manual PUT, R 23956 + 1.2x11 = 23969.2 -> CALL."""
     engine, state, client = _engine()
     candles = [
         ("Drift up — PUT S 23900 SL not hit",           _candle(1,  23924, 23932, 23920, 23930)),
-        ("Still below 23956+11 — no CALL yet",          _candle(2,  23930, 23945, 23928, 23945)),
-        ("Approach R 23956, not broken +11",            _candle(3,  23945, 23960, 23942, 23955)),
-        ("Close > 23967 — Case-II mirror CALL",         _candle(4,  23955, 23970, 23953, 23968)),
-        ("CALL in BOTH; PUT unchanged",                 _candle(5,  23968, 23975, 23965, 23972)),
+        ("Still below 23969.2 — no CALL yet",           _candle(2,  23930, 23945, 23928, 23945)),
+        ("Approach R 23956, not broken +1.2x",          _candle(3,  23945, 23960, 23942, 23955)),
+        ("Close >= 23969.2 — Case-II mirror CALL",      _candle(4,  23955, 23972, 23953, 23970)),
+        ("CALL in BOTH; PUT unchanged",                 _candle(5,  23970, 23975, 23965, 23972)),
     ]
-    _run_phase("CASE-II Mirror: PUT open, R 23956+11 break -> CALL",
+    _run_phase("CASE-II Mirror: PUT open, R 23956+1.2x11 -> CALL",
                candles, engine, state, client,
                first_side="PUT", first_spot=23924.0)
 
 
 def run_case2_mirror_bounce_only():
-    """
-    Sub-case: rally stays below 23967 but eventually crosses R+1.2x (23969.2).
-    No 1.0x resistance break — only bounce path fires CALL.
-    """
+    """Confirms CALL does NOT fire between 23967 and 23969.2 (old 1.0x zone)."""
     engine, state, client = _engine()
     candles = [
-        ("Rally but below 23967",                       _candle(1,  23924, 23950, 23922, 23950)),
-        ("Still below 23969.2 bounce threshold",        _candle(2,  23950, 23965, 23948, 23965)),
-        ("Close >= 23969.2 — bounce CALL (1.2x path)",  _candle(3,  23965, 23972, 23963, 23970)),
+        ("Rally but below 23969.2",                     _candle(1,  23924, 23950, 23922, 23950)),
+        ("Close 23968 — still below 1.2x threshold",    _candle(2,  23950, 23968, 23948, 23968)),
+        ("Close >= 23969.2 — CALL fires",               _candle(3,  23968, 23972, 23966, 23970)),
     ]
-    _run_phase("CASE-II Mirror alt: CALL at R+1.2x (23969.2) only",
+    _run_phase("CASE-II Mirror: no CALL at 23968, yes at 23970",
                candles, engine, state, client,
                first_side="PUT", first_spot=23924.0)
+
+
+def run_put_reentry_ladder():
+    """
+    Jun-12 CSV scenario: PUT SL at S=23335, no re-entry at 10:23,
+    ladder advances when R=23372 broken at 11:13, PUT re-entry at 11:20.
+    """
+    engine, state, client = _engine()
+    engine.manual_buy_call(23425.40)
+    client.current_spot = 23425.40
+    state.put_pos = None
+    state.pending_put_reentry = SRLevel(23335)
+    state.fsm = FSMState.CALL_ONLY
+    candles = [
+        ("10:23 — blocked (23349 > 23335-1.2x11=23321.8)", _candle(1, 23349, 23350, 23348, 23349.60)),
+        ("Rally toward 23372",                              _candle(2, 23360, 23370, 23358, 23368.00)),
+        ("11:13 — close>23372, ladder S->23372",            _candle(3, 23371.6, 23374.15, 23370.25, 23372.90)),
+        ("Sideways above new gate 23358.8",                 _candle(4, 23378, 23380, 23373, 23378.00)),
+        ("11:20 — PUT re-entry (23353.85 < 23358.8)",       _candle(5, 23363.1, 23363.1, 23352.6, 23353.85)),
+    ]
+    _run_phase("PUT re-entry ladder: SL@23335 -> R23372 -> re-entry@11:20",
+               candles, engine, state, client)
+
+
+def run_call_reentry_ladder():
+    """Mirror: CALL SL ref ladders down when supports break."""
+    engine, state, client = _engine()
+    engine.manual_buy_put(23924.0)
+    client.current_spot = 23924.0
+    state.call_pos = None
+    state.pending_call_reentry = SRLevel(24000)
+    state.fsm = FSMState.PUT_ONLY
+    candles = [
+        ("Fall — no CALL yet (below 24013.2)",              _candle(1, 23990, 23995, 23980, 23985.00)),
+        ("Break S=23956 — ladder R->23956",                 _candle(2, 23960, 23962, 23950, 23955.00)),
+        ("Still below 23969.2 gate",                        _candle(3, 23955, 23968, 23953, 23968.00)),
+        ("CALL re-entry at 23970 >= 23956+1.2x11",          _candle(4, 23968, 23972, 23966, 23970.00)),
+    ]
+    _run_phase("CALL re-entry ladder: SL ref 24000 -> S23956 -> re-entry@23970",
+               candles, engine, state, client)
 
 
 def run_case1_put_mirror():
@@ -252,6 +283,54 @@ def run_case1_put_mirror():
                first_side="PUT", first_spot=23924.0)
 
 
+def run_call_sl_below_entry_guard():
+    """
+    Jun-29 live bug: CALL re-entry @ 24083, market falls, bounce crosses R below
+    entry (e.g. 24010) must NOT arm SL. Only R > entry_spot counts for CALL exit.
+    """
+    engine, state, client = _engine()
+    # User's current S/R ladder (subset from config.py)
+    state.sr_levels = [
+        SRLevel(23810), SRLevel(23846), SRLevel(23890), SRLevel(23945),
+        SRLevel(24010), SRLevel(24045), SRLevel(24066, 7), SRLevel(24084),
+        SRLevel(24115), SRLevel(24135, 7), SRLevel(24165),
+    ]
+    engine.manual_buy_put(24065.2)
+    client.current_spot = 24065.2
+    # Seed BOTH: PUT from manual + CALL re-entry @ 24083.1 (after prior SL)
+    engine._enter_call(24083.1, "CALL_REENTRY_AFTER_SL")
+    assert state.call_pos is not None
+    assert state.call_pos.entry_spot == 24083.1
+    entry_r = state.call_pos.own_resistance.level if state.call_pos.own_resistance else 0
+    assert entry_r > 24083.1, f"CALL R should be above entry, got {entry_r}"
+
+    candles = [
+        ("Market falls — CALL SL still waiting (R above entry not broken)",
+         _candle(1, 24080, 24082, 23980, 23950)),
+    ]
+    _run_phase("CALL SL guard (phase 1: drop)", candles, engine, state, client)
+
+    # Manual S/R table refresh while price is low — old bug reassigned R to 24010
+    client.current_spot = 23945.0
+    state.last_candle = _candle(2, 23950, 23955, 23940, 23945)
+    engine._reeval()
+
+    phase2 = [
+        ("Bounce crosses 24010 — must NOT activate CALL SL",
+         _candle(3, 23945, 24015, 23940, 24012)),
+        ("Further drop — CALL must still be open",
+         _candle(4, 24010, 24010, 23940, 23945)),
+    ]
+    events = _run_phase(
+        "CALL SL guard (phase 2: bounce below entry R)",
+        phase2, engine, state, client,
+    )
+    sells = [e for e in events if e.get("type") == "SELL" and e.get("side") == "CALL"]
+    assert not sells, f"CALL should not SL_HIT on sub-entry resistance; got {sells}"
+    assert state.has_call(), "CALL position must remain open"
+    assert not state.call_pos.sl_active, "CALL SL must stay inactive until R > entry broken"
+
+
 def main():
     print("\nSPEC WALK-THROUGH BACKTEST")
     print(f"S/R levels : {SPEC_LEVELS}")
@@ -262,6 +341,9 @@ def main():
     run_case2()
     run_case2_mirror()
     run_case2_mirror_bounce_only()
+    run_put_reentry_ladder()
+    run_call_reentry_ladder()
+    run_call_sl_below_entry_guard()
     run_case1_put_mirror()
 
     print("\n" + "=" * 72)
@@ -269,9 +351,12 @@ def main():
     print("  [x] Case-1A: CALL only at 23952; PUT after CALL SL at 23985")
     print("  [x] Case-1A: no CALL at 23948/23942; PUT SL + CALL at 23970 (23956+1.2x)")
     print("  [x] Case-1B: trapped PUT; CALL at 24015 (24000+1.2x11)")
-    print("  [x] Case-II:   PUT only at 23888 (23900-11 support break)")
-    print("  [x] Case-II mirror: CALL at 23968 (23956+11 resistance break)")
-    print("  [x] Case-II mirror alt: CALL at 23970 (23956+1.2x11 bounce)")
+    print("  [x] Case-II:   PUT at 23886 (23900-1.2x11 support break)")
+    print("  [x] Case-II mirror: CALL at 23970 (23956+1.2x11)")
+    print("  [x] Case-II mirror: no CALL at 23968, fires at 23970")
+    print("  [x] PUT re-entry ladder: no PUT@10:23; PUT@11:20 after R23372 break")
+    print("  [x] CALL re-entry ladder: R ref steps down; CALL at 23970")
+    print("  [x] CALL SL guard: no SL on resistance below entry after drop+bounce")
     print("=" * 72)
 
 

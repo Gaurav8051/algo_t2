@@ -122,6 +122,11 @@ class AlgoState:
     index_key: str               = "NIFTY50"
     mode:      str               = "PAPER"   # "PAPER" | "LIVE" | "BACKTEST" — used for alert labels only
     last_session_date: Optional[Any] = None  # date of the last candle processed; drives 9:15 day-reset
+    # After SL exit: same-side re-entry gated at exit level +/- 1.2x tol (blocks Case-II spam)
+    pending_put_reentry:  Optional[SRLevel] = None   # PUT re-entry needs S - 1.2x
+    pending_call_reentry: Optional[SRLevel] = None   # CALL re-entry needs R + 1.2x
+    call_disabled: bool = False   # strategy skips CALL auto logic + manual CALL blocked
+    put_disabled:  bool = False   # strategy skips PUT auto logic + manual PUT blocked
 
     def has_call(self) -> bool:  return self.call_pos is not None
     def has_put(self)  -> bool:  return self.put_pos  is not None

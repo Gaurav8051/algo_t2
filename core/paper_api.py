@@ -30,6 +30,7 @@ class PaperClient:
         self._counter     = 0
         self.current_spot = 0.0
         self.trades: list[dict] = []
+        self._closed_fill_notice_at = 0.0   # throttle "market closed" fill messages
 
         # Warm up spot price — graceful if market is closed
         try:
@@ -77,8 +78,8 @@ class PaperClient:
     def get_option_security_id(self, strike: float, opt_type: str, expiry: str) -> str:
         return get_option_security_id(self._dhan, strike, opt_type, expiry)
 
-    def get_expiry_list(self) -> list[str]:
-        return get_expiry_list(self._dhan)
+    def get_expiry_list(self, index_key: str | None = None) -> list[str]:
+        return get_expiry_list(self._dhan, index_key or config.ACTIVE_INDEX)
 
     def check_funds_before_buy(self, security_id: str, strike: float,
                                side: str) -> tuple[bool, float, float]:
@@ -133,11 +134,22 @@ class PaperClient:
 
     def _fill(self, security_id: str, ref_spot: float) -> float:
         """
-        Get real option LTP via ohlc_data.
-        During market hours: returns live LTP.
-        Outside market hours: returns previous close (options keep last_price).
-        Fallback: 0.5% of current spot (if API fails entirely).
+        Get real option LTP via ohlc_data when market is open.
+        Outside market hours: use paper estimate (0.5% of spot) without error spam.
         """
+        spot = ref_spot if ref_spot > 0 else self.current_spot
+        fb = round(max(spot, 1) * 0.005, 2)
+
+        if not _is_market_hours():
+            now = time.time()
+            if now - self._closed_fill_notice_at >= 300:
+                log.info(
+                    "Market closed — waiting for live option data at 9:15 AM IST. "
+                    f"Paper fill estimate Rs{fb:.2f} (0.5% of spot {spot:.2f})."
+                )
+                self._closed_fill_notice_at = now
+            return fb
+
         try:
             p = self.get_option_ltp(security_id)
             if p > 0:
@@ -145,9 +157,6 @@ class PaperClient:
         except Exception as e:
             log.warning(f"Option LTP failed ({security_id}): {e}")
 
-        # Fallback: 0.5% of spot
-        spot = ref_spot if ref_spot > 0 else self.current_spot
-        fb = round(max(spot, 1) * 0.005, 2)
         log.warning(f"Using fallback fill Rs{fb:.2f} (0.5% of spot {spot:.2f})")
         return fb
 

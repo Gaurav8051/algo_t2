@@ -253,18 +253,37 @@ def get_expiry_list(dhan: dhanhq, index_key: str = None) -> list[str]:
     if index_key is None:
         index_key = config.ACTIVE_INDEX
     idx  = config.INDEX_CONFIG[index_key]
-    resp = dhan.expiry_list(
-        under_security_id      = idx["under_sec_id"],
-        under_exchange_segment = idx["exchange_seg"],
-    )
-    if resp.get("status") != "success":
-        raise RuntimeError(f"expiry_list failed: {resp}")
-    inner = _unwrap(resp)
-    if isinstance(inner, list):
-        expiries = inner
-    else:
-        expiries = next((v for v in inner.values() if isinstance(v, list)), [])
-    return sorted(e for e in expiries if isinstance(e, str) and len(e) == 10 and e[4] == "-")
+    sec_ids = [int(x) for x in idx.get("expiry_sec_ids", [idx["under_sec_id"]])]
+    segments = list(dict.fromkeys(
+        idx.get("expiry_segments", [idx["exchange_seg"], idx.get("opt_seg", "")])
+    ))
+    segments = [s for s in segments if s]
+
+    last_err: Exception | None = None
+    for sid in sec_ids:
+        for seg in segments:
+            try:
+                resp = dhan.expiry_list(
+                    under_security_id      = sid,
+                    under_exchange_segment = seg,
+                )
+                if resp.get("status") != "success":
+                    last_err = RuntimeError(f"expiry_list failed ({seg} id={sid}): {resp}")
+                    continue
+                inner = _unwrap(resp)
+                if isinstance(inner, list):
+                    expiries = inner
+                else:
+                    expiries = next((v for v in inner.values() if isinstance(v, list)), [])
+                out = sorted(e for e in expiries
+                             if isinstance(e, str) and len(e) == 10 and e[4] == "-")
+                if out:
+                    log.info(f"expiry_list {index_key}: {len(out)} dates via {seg} id={sid}")
+                    return out
+            except Exception as e:
+                last_err = e
+                log.debug(f"expiry_list try {seg} id={sid}: {e}")
+    raise RuntimeError(last_err or f"No expiries for {index_key}")
 
 
 # ─── Open positions ───────────────────────────────────────────────────────────

@@ -1,0 +1,10 @@
+# Copy to config_local.py on the SERVER only (never commit real values).
+# config_local.py overrides config.py and survives code updates via scp.
+
+CLIENT_ID    = "your_dhan_client_id"
+ACCESS_TOKEN = "your_daily_access_token_from_dhan_co"
+
+# Optional:
+# TELEGRAM_BOT_TOKEN = ""
+# TELEGRAM_CHAT_ID   = ""
+# CONTROL_TOKEN      = "your-dashboard-secret"

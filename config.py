@@ -70,6 +70,9 @@ INDEX_CONFIG = {
         "lot_size":     100,
         "market_close": "23:30",
         "under_sec_id": 267640,
+        # expiry_list may need alternate segment / contract id on Dhan
+        "expiry_segments": ["MCX_COMM", "MCX_FNO"],
+        "expiry_sec_ids":  [267640, 481575],
     },
 }
 
@@ -117,17 +120,26 @@ NEAR_SR_MULT      = 1.5
 DAILY_PROFIT_TARGET =  6000.0
 DAILY_LOSS_LIMIT    = -3000.0
 
+# PnL limit mode: "none" | "profit" | "loss" | "both"
+#   none   — no auto force-exit on PnL (default until you set targets)
+#   profit — exit when daily_pnl >= DAILY_PROFIT_TARGET
+#   loss   — exit when daily_pnl <= DAILY_LOSS_LIMIT
+#   both   — either target triggers force-exit
+PNL_LIMIT_MODE = "none"
+
 # Whether the daily P&L limit force-exits a position, per run mode.
-# BACKTEST is False by design: an unattended backtest has no way to place a
-# new MANUAL first trade after a force-exit (every position in this strategy
-# starts from a manual trade), so force-exiting would silently end the
-# backtest's trading for the rest of the dataset. LIVE/PAPER keep the
-# protection since a human is present to react and re-enter manually.
 PNL_LIMIT_ENABLED_FOR_MODE = {
     "LIVE":     True,
     "PAPER":    True,
     "BACKTEST": False,
 }
+
+# ── Remote control (local dashboard → cloud server) ───────────────────────────
+CONTROL_PORT   = 8765          # TCP port on server (open in Oracle security list)
+CONTROL_BIND   = "0.0.0.0"     # listen on all interfaces
+CONTROL_TOKEN  = ""            # optional shared secret; blank = no auth
+LOCK_FILE      = "data/algo.lock"
+ORDER_LOG_FILE = "data/order_log.json"
 
 # ── Candle interval ───────────────────────────────────────────────────────────
 CANDLE_INTERVAL_SEC = 60
@@ -139,3 +151,15 @@ CMD_FILE         = "data/command.json"
 SESSION_FILE     = "data/session.json"
 PAPER_TRADE_FILE        = "data/paper_trades.json"
 PAPER_LAST_SNAPSHOT_FILE = "data/paper_last_snapshot.json"
+
+# ── Server-only secrets (optional) ───────────────────────────────────────────
+# Create config_local.py on the server with CLIENT_ID / ACCESS_TOKEN so
+# routine code deploys (scp core/*.py) never wipe your Dhan credentials.
+try:
+    import config_local as _local
+    for _k in ("CLIENT_ID", "ACCESS_TOKEN", "TELEGRAM_BOT_TOKEN",
+               "TELEGRAM_CHAT_ID", "CONTROL_TOKEN"):
+        if hasattr(_local, _k):
+            globals()[_k] = getattr(_local, _k)
+except ImportError:
+    pass
